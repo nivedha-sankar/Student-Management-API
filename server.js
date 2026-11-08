@@ -1,24 +1,42 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
+
+const pool = require("./db");
 const studentRoutes = require("./routes/students");
 
 const app = express();
 
 // Middleware
-app.use(cors());
+git(cors());
 app.use(express.json());
 
-// Test route
+// Student API routes
+app.use("/api/students", studentRoutes);
+
+// Home route
 app.get("/", (req, res) => {
   res.send("Student Management API is running!");
 });
 
-// Student CRUD routes
-app.use("/students", studentRoutes);
+// Start server after checking database connection
+const PORT = process.env.PORT || 5000;
 
-// Start server
-const PORT = 3000;
+async function startServer() {
+  try {
+    const client = await pool.connect();
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+    console.log("PostgreSQL Connected Successfully!");
+
+    client.release();
+
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Database connection failed:", error.message);
+  }
+}
+
+startServer();;

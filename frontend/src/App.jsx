@@ -3,7 +3,7 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
-  const API = 'http://localhost:3000/students';
+  const API = 'http://localhost:5000/api/students';
 
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -17,7 +17,7 @@ function App() {
   const getStudents = async () => {
     try {
       const response = await axios.get(API);
-      setStudents(response.data);
+      setStudents(response.data.students);
     } catch (error) {
       console.log(error);
       alert('Failed to fetch students');

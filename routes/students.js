@@ -3,15 +3,18 @@ const router = express.Router();
 const pool = require("../db");
 
 // Validate student details
-const validateStudent = (data) => {
+function validateStudent(data) {
   const { name, age, course, email } = data;
 
   if (
-    !name?.trim() ||
+    typeof name !== "string" ||
+    !name.trim() ||
     age === undefined ||
     age === null ||
-    !course?.trim() ||
-    !email?.trim()
+    typeof course !== "string" ||
+    !course.trim() ||
+    typeof email !== "string" ||
+    !email.trim()
   ) {
     return "All fields are required";
   }
@@ -23,13 +26,21 @@ const validateStudent = (data) => {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!emailPattern.test(email.trim())) {
-    return "Please enter a valid email address";
+    return "Invalid email address";
   }
 
   return null;
-};
+}
 
-// GET - Get all students
+// Test route
+router.get("/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Student routes are working!"
+  });
+});
+
+// GET all students
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(
@@ -42,7 +53,7 @@ router.get("/", async (req, res) => {
       students: result.rows
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("GET students error:", err.message);
     res.status(500).json({
       success: false,
       error: "Failed to fetch students"
@@ -50,7 +61,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET - Get student by ID
+// GET student by ID
 router.get("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -74,12 +85,12 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
       student: result.rows[0]
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("GET student error:", err.message);
     res.status(500).json({
       success: false,
       error: "Failed to fetch student"
@@ -87,15 +98,15 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// POST - Add student
+// POST add student
 router.post("/", async (req, res) => {
   try {
-    const error = validateStudent(req.body);
+    const validationError = validateStudent(req.body);
 
-    if (error) {
+    if (validationError) {
       return res.status(400).json({
         success: false,
-        error
+        error: validationError
       });
     }
 
@@ -114,7 +125,7 @@ router.post("/", async (req, res) => {
       student: result.rows[0]
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("POST student error:", err.message);
     res.status(500).json({
       success: false,
       error: "Failed to add student"
@@ -122,7 +133,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT - Update student
+// PUT update student
 router.put("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -134,12 +145,12 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    const error = validateStudent(req.body);
+    const validationError = validateStudent(req.body);
 
-    if (error) {
+    if (validationError) {
       return res.status(400).json({
         success: false,
-        error
+        error: validationError
       });
     }
 
@@ -147,8 +158,8 @@ router.put("/:id", async (req, res) => {
 
     const result = await pool.query(
       `UPDATE students
-       SET name=$1, age=$2, course=$3, email=$4
-       WHERE id=$5
+       SET name = $1, age = $2, course = $3, email = $4
+       WHERE id = $5
        RETURNING *`,
       [name.trim(), Number(age), course.trim(), email.trim(), id]
     );
@@ -160,13 +171,13 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: "Student updated successfully",
       student: result.rows[0]
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("PUT student error:", err.message);
     res.status(500).json({
       success: false,
       error: "Failed to update student"
@@ -174,7 +185,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE - Delete student
+// DELETE student
 router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -187,7 +198,7 @@ router.delete("/:id", async (req, res) => {
     }
 
     const result = await pool.query(
-      "DELETE FROM students WHERE id=$1 RETURNING *",
+      "DELETE FROM students WHERE id = $1 RETURNING *",
       [id]
     );
 
@@ -198,12 +209,12 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: "Student deleted successfully"
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("DELETE student error:", err.message);
     res.status(500).json({
       success: false,
       error: "Failed to delete student"

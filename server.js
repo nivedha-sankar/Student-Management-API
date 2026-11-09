@@ -9,7 +9,7 @@ const studentRoutes = require("./routes/students");
 const app = express();
 
 // Middleware
-git(cors());
+app.use(cors());
 app.use(express.json());
 
 // Student API routes

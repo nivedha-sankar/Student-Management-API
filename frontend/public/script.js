@@ -1,27 +1,9 @@
-// Backend API URL
 const API_URL = "/api/students";
 
-// Get HTML elements
 const studentForm = document.getElementById("studentForm");
-const studentList = document.getElementById("studentList");
-const studentId = document.getElementById("studentId");
+const studentTableBody = document.getElementById("studentTableBody");
 
-const nameInput = document.getElementById("name");
-const ageInput = document.getElementById("age");
-const courseInput = document.getElementById("course");
-const emailInput = document.getElementById("email");
-
-const submitBtn = document.getElementById("submitBtn");
-const cancelBtn = document.getElementById("cancelBtn");
-const formTitle = document.getElementById("formTitle");
-const statusMessage = document.getElementById("statusMessage");
-
-
-// Display messages
-function showMessage(message) {
-    statusMessage.textContent = message;
-}
-
+let editingId = null;
 
 // GET - Display all students
 async function loadStudents() {
@@ -30,110 +12,69 @@ async function loadStudents() {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-            throw new Error(data.error || "Failed to fetch students");
+            throw new Error(data.error || "Failed to load students");
         }
 
-        studentList.innerHTML = "";
+        studentTableBody.innerHTML = "";
 
         data.students.forEach(student => {
-
             const row = document.createElement("tr");
 
-            // Student details
-            const values = [
-                student.id,
-                student.name,
-                student.age,
-                student.course,
-                student.email
-            ];
-
-            values.forEach(value => {
+            [student.id, student.name, student.age,
+             student.course, student.email].forEach(value => {
                 const cell = document.createElement("td");
                 cell.textContent = value;
                 row.appendChild(cell);
             });
 
-            // Action buttons
             const actionCell = document.createElement("td");
 
-            // Edit button
             const editButton = document.createElement("button");
             editButton.textContent = "Edit";
             editButton.className = "edit-btn";
+            editButton.onclick = () => editStudent(student);
 
-            editButton.addEventListener("click", () => {
-                editStudent(student);
-            });
-
-            // Delete button
             const deleteButton = document.createElement("button");
             deleteButton.textContent = "Delete";
             deleteButton.className = "delete-btn";
+            deleteButton.onclick = () => deleteStudent(student.id);
 
-            deleteButton.addEventListener("click", () => {
-                deleteStudent(student.id);
-            });
-
-            actionCell.appendChild(editButton);
-            actionCell.appendChild(deleteButton);
-
+            actionCell.append(editButton, deleteButton);
             row.appendChild(actionCell);
 
-            studentList.appendChild(row);
+            studentTableBody.appendChild(row);
         });
 
-        showMessage(`Total Students: ${data.count}`);
-
     } catch (error) {
-        console.error("GET Error:", error);
-        showMessage(error.message);
+        console.error("Loading error:", error);
+        alert(error.message);
     }
 }
 
-
-// POST - Add new student
-// PUT - Update existing student
+// POST - Add student
+// PUT - Update student
 studentForm.addEventListener("submit", async function(event) {
-
     event.preventDefault();
 
     const student = {
-        name: nameInput.value.trim(),
-        age: Number(ageInput.value),
-        course: courseInput.value.trim(),
-        email: emailInput.value.trim()
+        name: document.getElementById("name").value.trim(),
+        age: Number(document.getElementById("age").value),
+        course: document.getElementById("course").value.trim(),
+        email: document.getElementById("email").value.trim()
     };
 
-    const id = studentId.value;
-
     try {
+        const url = editingId
+            ? `${API_URL}/${editingId}`
+            : API_URL;
 
-        let response;
-
-        if (id) {
-
-            // PUT - Update student
-            response = await fetch(`${API_URL}/${id}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(student)
-            });
-
-        } else {
-
-            // POST - Add student
-            response = await fetch(API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(student)
-            });
-
-        }
+        const response = await fetch(url, {
+            method: editingId ? "PUT" : "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(student)
+        });
 
         const data = await response.json();
 
@@ -141,83 +82,45 @@ studentForm.addEventListener("submit", async function(event) {
             throw new Error(data.error || "Operation failed");
         }
 
-        showMessage(data.message);
+        alert(data.message);
 
-        resetForm();
+        studentForm.reset();
+        editingId = null;
+
+        document.getElementById("submitBtn").textContent = "Add Student";
 
         await loadStudents();
 
     } catch (error) {
-
-        console.error("POST/PUT Error:", error);
-        showMessage(error.message);
-
+        console.error("Save error:", error);
+        alert(error.message);
     }
-
 });
 
-
-// EDIT - Fill form with existing student details
+// Edit student
 function editStudent(student) {
+    editingId = student.id;
 
-    studentId.value = student.id;
+    document.getElementById("name").value = student.name;
+    document.getElementById("age").value = student.age;
+    document.getElementById("course").value = student.course;
+    document.getElementById("email").value = student.email;
 
-    nameInput.value = student.name;
-    ageInput.value = student.age;
-    courseInput.value = student.course;
-    emailInput.value = student.email;
-
-    formTitle.textContent = "Update Student";
-
-    submitBtn.textContent = "Update Student";
-
-    cancelBtn.hidden = false;
+    document.getElementById("submitBtn").textContent = "Update Student";
 
     window.scrollTo({
         top: 0,
         behavior: "smooth"
     });
-
 }
 
-
-// Cancel edit
-cancelBtn.addEventListener("click", function() {
-
-    resetForm();
-
-});
-
-
-// Reset form
-function resetForm() {
-
-    studentForm.reset();
-
-    studentId.value = "";
-
-    formTitle.textContent = "Add New Student";
-
-    submitBtn.textContent = "Add Student";
-
-    cancelBtn.hidden = true;
-
-}
-
-
-// DELETE - Remove student
+// DELETE - Delete student
 async function deleteStudent(id) {
-
-    const confirmDelete = confirm(
-        "Are you sure you want to delete this student?"
-    );
-
-    if (!confirmDelete) {
+    if (!confirm("Are you sure you want to delete this student?")) {
         return;
     }
 
     try {
-
         const response = await fetch(`${API_URL}/${id}`, {
             method: "DELETE"
         });
@@ -228,19 +131,14 @@ async function deleteStudent(id) {
             throw new Error(data.error || "Delete failed");
         }
 
-        showMessage(data.message);
-
+        alert(data.message);
         await loadStudents();
 
     } catch (error) {
-
-        console.error("DELETE Error:", error);
-        showMessage(error.message);
-
+        console.error("Delete error:", error);
+        alert(error.message);
     }
-
 }
 
-
-// Load students when webpage opens
+// Initial loading
 loadStudents();
